@@ -93,6 +93,9 @@ void setup() {
     strip.setPixelColor(b,255,0,0);
   }
   strip.show();
+  for (int b=0; b<3; b++) {
+    chase();
+  }
 
   WiFi.hostname("VFD-Clock");
   wifiManager.setHostname("VFD-Clock");
