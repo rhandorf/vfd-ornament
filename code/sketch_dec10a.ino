@@ -74,12 +74,13 @@ byte digits[10] {
 };
 
 void setup() {
+  delay(10000);
   Serial.begin(115200);
   EEPROM.begin(512);
   //utc = int(EEPROM.read(0));
   EEPROM.get(0,utc);
   EEPROM.end();
-  
+  //delay(500);
   pinMode(dataPin, OUTPUT);
   pinMode(loadPin, OUTPUT);
   pinMode(clockPin, OUTPUT);  
@@ -96,11 +97,14 @@ void setup() {
   for (int b=0; b<3; b++) {
     chase();
   }
-
+  //delay(500);
+  
   WiFi.hostname("VFD-Clock");
   wifiManager.setHostname("VFD-Clock");
+  wifiManager.setConnectTimeout(15);
   int i=0;
   wifiManager.autoConnect("VFD WiFi Manager");
+  //here
   /*
   if ( WiFi.status() != WL_CONNECTED) {
     wifiManager.autoConnect("VFD WiFi Manager");
@@ -110,7 +114,7 @@ void setup() {
     }
     if ( WiFi.status() != WL_CONNECTED) {
       wifiManager.resetSettings();
-      wifiManager.setTimeout(120);
+      wifiManager.setTimeout(15);
       if (!wifiManager.startConfigPortal("VFD WiFi Manager")) {
         Serial.println("failed to connect and hit timeout");
         delay(3000);
@@ -121,6 +125,7 @@ void setup() {
     }
   }
   */
+  //to here
   //WiFi.begin(ssid, password);
   //int i=0;
   //int b=0;
@@ -145,7 +150,7 @@ void setup() {
   //    b=0;
   //  }
   //}
-  
+  delay(500);
   timeClient.begin();
   server.begin();
   timeClient.update();
@@ -181,6 +186,43 @@ void setup() {
   secondTick=millis()+1000;
 }
 
+bool checkLeapYear(int the_year) {
+  if (the_year % 4 != 0) return false;
+  if (the_year % 100 == 0 && the_year %400 != 0) return false;
+  if (the_year % 400 == 0) return true;
+  return true;bool dst = false;
+}
+
+void xmas() {
+  int daysUntil = 25 - day();
+  int Day1 = (daysUntil/10U) % 10;
+  int Day2 = (daysUntil/1U) % 10;
+  digitalWrite(loadPin, 0);
+  shiftOut(dataPin, clockPin, LSBFIRST, digits[Day2]); //right
+  shiftOut(dataPin, clockPin, LSBFIRST, digits[Day1]); //left
+  digitalWrite(loadPin, 1);
+  for(int a=0; a<20; a++) {  // Repeat 10 times...
+    for(int b=0; b<3; b++) { //  'b' counts from 0 to 2...
+      strip.clear();         //   Set all pixels in RAM to 0 (off)
+      for(int i=0; i<strip.numPixels(); i++) {
+        strip.setPixelColor(i, 255,223,0);
+      }
+      for(int c=b; c<strip.numPixels(); c += 3) {
+        strip.setPixelColor(c, 255,0,0); // Set pixel 'c' to value 'color'
+      }
+      for(int c=b+1; c<strip.numPixels()+1; c += 3) {
+        if (c>=strip.numPixels()) {
+          strip.setPixelColor(0, 0,255,0); // Set pixel 'c' to value 'color'
+        } else {
+          strip.setPixelColor(c, 0,255,0); // Set pixel 'c' to value 'color'
+        }
+      }
+      strip.show(); // Update strip with new contents
+      delay(100);  // Pause for a moment
+    }
+  }
+}
+
 void chase() {
   byte disp = 0;
   for (unsigned int j=0; j<5; j++) {
@@ -190,10 +232,10 @@ void chase() {
       shiftOut(dataPin, clockPin, LSBFIRST, disp); //right
       shiftOut(dataPin, clockPin, LSBFIRST, disp); //left
       digitalWrite(loadPin, 1);
-      delay(25);
+      delay(25);bool dst = false;
       bitClear(disp, i);
     }  
-  }
+  }bool dst = false;
 }
 
 void casino() {
@@ -351,6 +393,9 @@ void loop() {
       int secondd = (second()/1U) % 10;
       int secondu = (second()/10U) % 10;
       float percent = (float)secondd/10;      
+      if (second() == 0 && month() == 12 && day()<=25) {
+        xmas();
+      }
       if (secondu==0) {
         strip.setPixelColor(1, hsl(PColor, saturation, (float)((lightness*(1-percent)))));
         strip.setPixelColor(0, hsl(PColor, saturation, (float)((lightness*percent))));
